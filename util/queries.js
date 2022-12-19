@@ -45,7 +45,7 @@ export async function getWorshipAdministrativeUnitForSubject(subject, type) {
 
   for(const config of configs) {
     const queryStr = `
-      SELECT DISTINCT ?submission WHERE {
+      SELECT DISTINCT ?worshipAdministrativeUnit WHERE {
         BIND(${sparqlEscapeUri(subject)} as ?subject)
 
         ?subject a ${sparqlEscapeUri(config.type)}.
@@ -55,7 +55,7 @@ export async function getWorshipAdministrativeUnitForSubject(subject, type) {
 
     const bindings = (await query(queryStr)).results.bindings;
     if(bindings.length) {
-      return bindings[0].submission.value;
+      return bindings[0].worshipAdministrativeUnit.value;
     }
   }
   return null;
@@ -106,7 +106,7 @@ export async function sendErrorAlert({message, detail, reference}) {
         GRAPH <http://mu.semte.ch/graphs/error> {
             ${sparqlEscapeUri(uri)} a oslc:Error ;
                     mu:uuid ${sparqlEscapeString(id)} ;
-                    dct:subject ${sparqlEscapeString('Dispatch worship submissions')} ;
+                    dct:subject ${sparqlEscapeString('Dispatch worship positions')} ;
                     oslc:message ${sparqlEscapeString(message)} ;
                     dct:created ${sparqlEscapeDateTime(new Date().toISOString())} ;
                     dct:creator ${sparqlEscapeUri(CREATOR)} .

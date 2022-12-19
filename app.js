@@ -12,7 +12,7 @@ import {
 } from "./util/queries";
 import exportConfig from "./export-config";
 
-const processSubjectsQueue = new ProcessingQueue('submissions-dispatch-queue');
+const processSubjectsQueue = new ProcessingQueue('worship-positions-dispatch-queue');
 
 app.use(
   bodyParser.json({
