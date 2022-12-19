@@ -1,4 +1,4 @@
-import {  sparqlEscapeUri, sparqlEscapeString, sparqlEscapeDateTime, uuid } from "mu";
+import { sparqlEscapeUri, sparqlEscapeString, sparqlEscapeDateTime, uuid } from "mu";
 import { querySudo as query, updateSudo as update } from "@lblod/mu-auth-sudo";
 import exportConfig from "../export-config";
 import { parseResult } from './utils';
@@ -42,7 +42,6 @@ export async function getTypesForSubject(subject) {
 
 export async function getWorshipAdministrativeUnitForSubject(subject, type) {
   const configs = exportConfig.filter(c => c.type == type);
-
   for(const config of configs) {
     const queryStr = `
       SELECT DISTINCT ?worshipAdministrativeUnit WHERE {
@@ -54,6 +53,7 @@ export async function getWorshipAdministrativeUnitForSubject(subject, type) {
     `;
 
     const bindings = (await query(queryStr)).results.bindings;
+
     if(bindings.length) {
       return bindings[0].worshipAdministrativeUnit.value;
     }
@@ -71,7 +71,7 @@ export async function getDestinationGraphs(worshipAdministrativeUnit) {
   `;
 
   const result = await query(queryStr);
-  return parseResult(result);
+  return parseResult(result).map(res => res.graph);
 }
 
 export async function copySubjectDataToDestinationGraphs(subject, destinationGraphs) {

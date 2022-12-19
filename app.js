@@ -54,7 +54,7 @@ async function processSubject(subject) {
       try {
         const worshipAdministrativeUnit = await getWorshipAdministrativeUnitForSubject(subject, type);
         if(worshipAdministrativeUnit) {
-          await dispatch(subject, worshipAdministrativeUnit);
+          await dispatch(worshipAdministrativeUnit);
         }
       }
       catch (e) {
@@ -72,16 +72,16 @@ async function processSubject(subject) {
   }
 }
 
-async function dispatch(subject, worshipAdministrativeUnit) {
+async function dispatch(worshipAdministrativeUnit) {
   const destinationGraphs = await getDestinationGraphs(worshipAdministrativeUnit);
-
-  let subjects = [];
+  let subjects = [worshipAdministrativeUnit];
   for (const config of exportConfig) {
-    subjects = await getRelatedSubjectsForWorshipAdministrativeUnit(
-      subject,
+    const subject = await getRelatedSubjectsForWorshipAdministrativeUnit(
+      worshipAdministrativeUnit,
       config.type,
       config.pathToWorshipAdminUnit
     );
+    subjects.push(...subject);
   }
 
   for(const subject of subjects) {
