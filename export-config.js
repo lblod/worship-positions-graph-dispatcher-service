@@ -6,6 +6,29 @@
  */
 export default [
   {
+    type: `http://data.lblod.info/vocabularies/erediensten/CentraalBestuurVanDeEredienst`,
+    pathToWorshipAdminUnit: `?worshipAdministrativeUnit a <http://data.lblod.info/vocabularies/erediensten/CentraalBestuurVanDeEredienst> .\n FILTER(?worshipAdministrativeUnit = ?subject)`
+  },
+  {
+    type: `http://data.lblod.info/vocabularies/erediensten/BestuurVanDeEredienst`,
+    pathToWorshipAdminUnit: `?worshipAdministrativeUnit a <http://data.lblod.info/vocabularies/erediensten/BestuurVanDeEredienst> .\n FILTER(?worshipAdministrativeUnit = ?subject)`
+  },
+  {
+    type: `http://data.vlaanderen.be/ns/besluit#Bestuursorgaan`,
+    pathToWorshipAdminUnit: `
+      ?subject <https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan> ?orgaan .
+      ?orgaan <http://data.vlaanderen.be/ns/besluit#bestuurt> ?worshipAdministrativeUnit .
+    `
+  },
+  {
+    type: `http://data.vlaanderen.be/ns/mandaat#Mandaat`,
+    pathToWorshipAdminUnit: `
+      ?orgaanInTime <http://www.w3.org/ns/org#hasPost> ?subject ;
+        <https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan> ?orgaan .
+      ?orgaan <http://data.vlaanderen.be/ns/besluit#bestuurt> ?worshipAdministrativeUnit .
+    `
+  },
+  {
     type: `http://data.vlaanderen.be/ns/mandaat#Mandaat`,
     pathToWorshipAdminUnit: `
       ?orgaanInTime <http://www.w3.org/ns/org#hasPost> ?subject ;
