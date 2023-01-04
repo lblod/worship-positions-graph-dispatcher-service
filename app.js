@@ -12,7 +12,8 @@ import {
 } from "./util/queries";
 import exportConfig from "./export-config";
 
-const processSubjectsQueue = new ProcessingQueue('worship-positions-dispatch-queue');
+const processSubjectsQueue = new ProcessingQueue('worship-positions-process-queue');
+const dispatchSubjectsQueue = new ProcessingQueue('worship-positions-dispatch-queue');
 
 app.use(
   bodyParser.json({
@@ -41,7 +42,7 @@ app.post("/delta", async function (req, res) {
   const uniqueSubjects = [ ...new Set(subjects) ];
 
   for (const subject of uniqueSubjects) {
-    // Ensuring we only process a subject once to keep the queue as small as possible
+    // Ensuring we only process a subject when necessary to keep the queue as small as possible
     if (!processSubjectsQueue.hasJobForSubject(subject)) {
       processSubjectsQueue.addJob(subject, () => processSubject(subject));
     }
@@ -56,8 +57,11 @@ async function processSubject(subject) {
     for(const type of types) {
       try {
         const worshipAdministrativeUnit = await getWorshipAdministrativeUnitForSubject(subject, type);
-        if(worshipAdministrativeUnit) {
-          await dispatch(worshipAdministrativeUnit);
+        if (worshipAdministrativeUnit) {
+          // Ensuring we only dispatch data of a worship admin unit when necessary to keep the queue as small as possible
+          if (!dispatchSubjectsQueue.hasJobForSubject(worshipAdministrativeUnit)) {
+            dispatchSubjectsQueue.addJob(worshipAdministrativeUnit, () => dispatch(worshipAdministrativeUnit));
+          }
         }
       }
       catch (e) {
