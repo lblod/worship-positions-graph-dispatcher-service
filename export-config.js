@@ -77,7 +77,7 @@ export default [
     `
   },
   {
-    type: `http://data.vlaanderen.be/ns/persoon#Geboorte`, // Birthdate of person linked to a EredienstMandataris
+    type: `https://data.vlaanderen.be/ns/persoon#Geboorte`, // Birthdate of person linked to a EredienstMandataris
     pathToWorshipAdminUnit: `
       ?person <https://data.vlaanderen.be/ns/persoon#heeftGeboorte> ?subject .
       ?mandataris <http://data.vlaanderen.be/ns/mandaat#isBestuurlijkeAliasVan> ?person ;
@@ -88,7 +88,7 @@ export default [
     `
   },
   {
-    type: `http://data.vlaanderen.be/ns/persoon#Geboorte`, // Birthdate of person linked to a RolBedienaar
+    type: `https://data.vlaanderen.be/ns/persoon#Geboorte`, // Birthdate of person linked to a RolBedienaar
     pathToWorshipAdminUnit: `
       ?person <https://data.vlaanderen.be/ns/persoon#heeftGeboorte> ?subject .
       ?minister <http://www.w3.org/ns/org#heldBy> ?person ;
