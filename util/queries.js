@@ -14,7 +14,7 @@ export async function getRelatedSubjectsForWorshipAdministrativeUnit(
   const queryStr = `
     SELECT DISTINCT ?subject WHERE {
       BIND(${sparqlEscapeUri(worshipAdministrativeUnit)} as ?worshipAdministrativeUnit)
-      GRAPH ?g {
+      GRAPH ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)} {
         ?subject a ${sparqlEscapeUri(subjectType)}.
       }
       ${pathToWorshipAdminUnit}
@@ -67,6 +67,7 @@ export async function getDestinationGraphs(worshipAdministrativeUnit) {
       GRAPH ?graph {
         ${sparqlEscapeUri(worshipAdministrativeUnit)} ?p ?o .
       }
+      FILTER (?graph != ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)})
     }
   `;
 
@@ -75,22 +76,33 @@ export async function getDestinationGraphs(worshipAdministrativeUnit) {
 }
 
 export async function copySubjectDataToDestinationGraphs(subject, destinationGraphs) {
+  let insertInGraphs = '';
   for (const destinationGraph of destinationGraphs) {
-    const queryStr = `
-      INSERT {
-        GRAPH ${sparqlEscapeUri(destinationGraph)} {
-          ?s ?p ?o.
-        }
-      }
-      WHERE {
-        BIND(${sparqlEscapeUri(subject)} as ?s)
-        GRAPH ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)} {
-          ?s ?p ?o.
-        }
+    insertInGraphs += `
+      GRAPH ${sparqlEscapeUri(destinationGraph)} {
+        ?s ?p ?o.
       }
     `;
-    await update(queryStr);
   }
+
+  const queryStr = `
+    DELETE {
+      GRAPH ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)} {
+        ?s ?p ?o.
+      }
+    }
+    INSERT {
+      ${insertInGraphs}
+    }
+    WHERE {
+      BIND(${sparqlEscapeUri(subject)} as ?s)
+      GRAPH ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)} {
+        ?s ?p ?o.
+      }
+    }
+  `;
+  await update(queryStr);
+
 }
 
 export async function sendErrorAlert({message, detail, reference}) {

@@ -40,8 +40,11 @@ app.post("/delta", async function (req, res) {
   const subjects = inserts.map(insert => insert.subject.value);
   const uniqueSubjects = [ ...new Set(subjects) ];
 
-  for(const subject of uniqueSubjects) {
-    processSubjectsQueue.addJob(() => processSubject(subject));
+  for (const subject of uniqueSubjects) {
+    // Ensuring we only process a subject once to keep the queue as small as possible
+    if (!processSubjectsQueue.hasJobForSubject(subject)) {
+      processSubjectsQueue.addJob(subject, () => processSubject(subject));
+    }
   }
   return res.status(200).send();
 });
