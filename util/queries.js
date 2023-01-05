@@ -14,8 +14,9 @@ export async function getRelatedSubjectsForWorshipAdministrativeUnit(
   const queryStr = `
     SELECT DISTINCT ?subject WHERE {
       BIND(${sparqlEscapeUri(worshipAdministrativeUnit)} as ?worshipAdministrativeUnit)
+      ?subject a ${sparqlEscapeUri(subjectType)}.
       GRAPH ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)} {
-        ?subject a ${sparqlEscapeUri(subjectType)}.
+        ?subject ?p ?o .
       }
       ${pathToWorshipAdminUnit}
     }
