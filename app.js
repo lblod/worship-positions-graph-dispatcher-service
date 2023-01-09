@@ -19,7 +19,19 @@ app.use(
   bodyParser.json({
     type: function (req) {
       return /^application\/json/.test(req.get("content-type"));
-    }
+    },
+    limit: '50mb',
+    extended: true
+  })
+);
+
+app.use(
+  bodyParser.urlencoded({
+    type: function (req) {
+      return /^application\/json/.test(req.get("content-type"));
+    },
+    limit: '50mb',
+    extended: true
   })
 );
 
