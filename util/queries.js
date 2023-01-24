@@ -9,13 +9,15 @@ const CREATOR = 'http://lblod.data.gift/services/worship-positions-graph-dispatc
 export async function getRelatedSubjectsForWorshipAdministrativeUnit(
   worshipAdministrativeUnit,
   subjectType,
-  pathToWorshipAdminUnit
+  pathToWorshipAdminUnit,
+  destinationGraphs
 ) {
   const queryStr = `
-    SELECT DISTINCT ?subject WHERE {
+    SELECT DISTINCT ?graph ?subject WHERE {
       BIND(${sparqlEscapeUri(worshipAdministrativeUnit)} as ?worshipAdministrativeUnit)
       ?subject a ${sparqlEscapeUri(subjectType)}.
-      GRAPH ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)} {
+
+      GRAPH ?graph {
         ?subject ?p ?o .
       }
       ${pathToWorshipAdminUnit}
@@ -23,7 +25,16 @@ export async function getRelatedSubjectsForWorshipAdministrativeUnit(
   `;
 
   const result = await query(queryStr);
-  return result.results.bindings.map(r => r.subject.value);
+
+  // If the subject needs to go in a destination graph that is not in the list of graphs
+  // the subject already is (?g), we keep the subject to be propagated
+  const subjects = result.results.bindings
+    .filter(r => {
+      return destinationGraphs.find(destinationGraphs => destinationGraphs != r.graph.value);
+    })
+    .map(r => r.subject.value);
+
+  return [ ...new Set(subjects)];
 }
 
 export async function getTypesForSubject(subject) {
@@ -97,9 +108,7 @@ export async function copySubjectDataToDestinationGraphs(subject, destinationGra
     }
     WHERE {
       BIND(${sparqlEscapeUri(subject)} as ?s)
-      GRAPH ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)} {
-        ?s ?p ?o.
-      }
+      ?s ?p ?o.
     }
   `;
   await update(queryStr);
