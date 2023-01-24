@@ -12,22 +12,24 @@ export async function getRelatedSubjectsForWorshipAdministrativeUnit(
   pathToWorshipAdminUnit,
   destinationGraphs
 ) {
-  const formattedDestinationGraphs = destinationGraphs.map(g => sparqlEscapeUri(g)).join(',')
-
   const queryStr = `
-    SELECT DISTINCT ?subject WHERE {
+    SELECT DISTINCT ?g ?subject WHERE {
       BIND(${sparqlEscapeUri(worshipAdministrativeUnit)} as ?worshipAdministrativeUnit)
       ?subject a ${sparqlEscapeUri(subjectType)}.
+
       GRAPH ?g {
         ?subject ?p ?o .
       }
-      FILTER ( ?g NOT IN ( ${formattedDestinationGraphs} ) )
       ${pathToWorshipAdminUnit}
     }
   `;
 
   const result = await query(queryStr);
-  return result.results.bindings.map(r => r.subject.value);
+  return result.results.bindings
+    .filter(r => {
+      return destinationGraphs.find(g => g != r.g.value);
+    })
+    .map(r => r.subject.value);
 }
 
 export async function getTypesForSubject(subject) {
