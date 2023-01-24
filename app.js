@@ -93,18 +93,20 @@ async function processSubject(subject) {
 
 async function dispatch(worshipAdministrativeUnit) {
   const destinationGraphs = await getDestinationGraphs(worshipAdministrativeUnit);
-  let subjects = [worshipAdministrativeUnit];
-  for (const config of exportConfig) {
-    const subject = await getRelatedSubjectsForWorshipAdministrativeUnit(
-      worshipAdministrativeUnit,
-      config.type,
-      config.pathToWorshipAdminUnit,
-      destinationGraphs
-    );
-    subjects.push(...subject);
-  }
+  if (destinationGraphs.length) {
+    let subjects = [worshipAdministrativeUnit];
+    for (const config of exportConfig) {
+      const subject = await getRelatedSubjectsForWorshipAdministrativeUnit(
+        worshipAdministrativeUnit,
+        config.type,
+        config.pathToWorshipAdminUnit,
+        destinationGraphs
+      );
+      subjects.push(...subject);
+    }
 
-  for(const subject of subjects) {
-    await copySubjectDataToDestinationGraphs(subject, destinationGraphs);
+    for(const subject of subjects) {
+      await copySubjectDataToDestinationGraphs(subject, destinationGraphs);
+    }
   }
 }

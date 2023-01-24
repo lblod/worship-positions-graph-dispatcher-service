@@ -13,11 +13,11 @@ export async function getRelatedSubjectsForWorshipAdministrativeUnit(
   destinationGraphs
 ) {
   const queryStr = `
-    SELECT DISTINCT ?g ?subject WHERE {
+    SELECT DISTINCT ?graph ?subject WHERE {
       BIND(${sparqlEscapeUri(worshipAdministrativeUnit)} as ?worshipAdministrativeUnit)
       ?subject a ${sparqlEscapeUri(subjectType)}.
 
-      GRAPH ?g {
+      GRAPH ?graph {
         ?subject ?p ?o .
       }
       ${pathToWorshipAdminUnit}
@@ -25,11 +25,16 @@ export async function getRelatedSubjectsForWorshipAdministrativeUnit(
   `;
 
   const result = await query(queryStr);
-  return result.results.bindings
+
+  // If the subject needs to go in a destination graph that is not in the list of graphs
+  // the subject already is (?g), we keep the subject to be propagated
+  const subjects = result.results.bindings
     .filter(r => {
-      return destinationGraphs.find(g => g != r.g.value);
+      return destinationGraphs.find(destinationGraphs => destinationGraphs != r.graph.value);
     })
     .map(r => r.subject.value);
+
+  return [ ...new Set(subjects)];
 }
 
 export async function getTypesForSubject(subject) {
