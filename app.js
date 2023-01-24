@@ -98,7 +98,8 @@ async function dispatch(worshipAdministrativeUnit) {
     const subject = await getRelatedSubjectsForWorshipAdministrativeUnit(
       worshipAdministrativeUnit,
       config.type,
-      config.pathToWorshipAdminUnit
+      config.pathToWorshipAdminUnit,
+      destinationGraphs
     );
     subjects.push(...subject);
   }

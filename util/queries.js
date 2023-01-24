@@ -9,15 +9,19 @@ const CREATOR = 'http://lblod.data.gift/services/worship-positions-graph-dispatc
 export async function getRelatedSubjectsForWorshipAdministrativeUnit(
   worshipAdministrativeUnit,
   subjectType,
-  pathToWorshipAdminUnit
+  pathToWorshipAdminUnit,
+  destinationGraphs
 ) {
+  const formattedDestinationGraphs = destinationGraphs.map(g => sparqlEscapeUri(g)).join(',')
+
   const queryStr = `
     SELECT DISTINCT ?subject WHERE {
       BIND(${sparqlEscapeUri(worshipAdministrativeUnit)} as ?worshipAdministrativeUnit)
       ?subject a ${sparqlEscapeUri(subjectType)}.
-      GRAPH ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)} {
+      GRAPH ?g {
         ?subject ?p ?o .
       }
+      FILTER ( ?g NOT IN ( ${formattedDestinationGraphs} ) )
       ${pathToWorshipAdminUnit}
     }
   `;
@@ -97,9 +101,7 @@ export async function copySubjectDataToDestinationGraphs(subject, destinationGra
     }
     WHERE {
       BIND(${sparqlEscapeUri(subject)} as ?s)
-      GRAPH ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)} {
-        ?s ?p ?o.
-      }
+      ?s ?p ?o.
     }
   `;
   await update(queryStr);
