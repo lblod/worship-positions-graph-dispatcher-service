@@ -8,12 +8,22 @@ import {
   getWorshipAdministrativeUnitForSubject,
   getDestinationGraphs,
   copySubjectDataToDestinationGraphs,
-  getRelatedSubjectsForWorshipAdministrativeUnit
+  getRelatedSubjectsForWorshipAdministrativeUnit,
+  isSubjectPublicAfterAdditionalFilters,
+  insertRepresentativeOrganExtraTriples,
+  getSubjectsToDispatchAfterIngestOfSubject
 } from "./util/queries";
-import exportConfig from "./export-config";
+import {
+  dispatchToOrgGraphsConfig,
+  dispatchToPublicGraphConfig
+} from "./dispatch-config";
+import { PUBLIC_GRAPH } from "./config"
 
-const processSubjectsQueue = new ProcessingQueue('worship-positions-process-queue');
-const dispatchSubjectsQueue = new ProcessingQueue('worship-positions-dispatch-queue');
+const PROCESS_SUBJECT_QUEUE = new ProcessingQueue('worship-positions-process-queue');
+const DISPATCH_PUBLIC_SUBJECTS_QUEUE = new ProcessingQueue('worship-positions-public-dispatch-queue');
+const DISPATCH_ORG_SUBJECTS_QUEUE = new ProcessingQueue('worship-positions-org-dispatch-queue');
+
+const REPRESENTATIVE_ORGAN_TYPE = 'http://data.lblod.info/vocabularies/erediensten/RepresentatiefOrgaan';
 
 app.use(
   bodyParser.json({
@@ -55,8 +65,8 @@ app.post("/delta", async function (req, res) {
 
   for (const subject of uniqueSubjects) {
     // Ensuring we only process a subject when necessary to keep the queue as small as possible
-    if (!processSubjectsQueue.hasJobForSubject(subject)) {
-      processSubjectsQueue.addJob(subject, () => processSubject(subject));
+    if (!PROCESS_SUBJECT_QUEUE.hasJobForSubject(subject)) {
+      PROCESS_SUBJECT_QUEUE.addJob(subject, () => processSubject(subject));
     }
   }
   return res.status(200).send();
@@ -66,21 +76,39 @@ async function processSubject(subject) {
   try {
     const types = await getTypesForSubject(subject);
 
-    for(const type of types) {
-      try {
-        const worshipAdministrativeUnit = await getWorshipAdministrativeUnitForSubject(subject, type);
-        if (worshipAdministrativeUnit) {
-          // Ensuring we only dispatch data of a worship admin unit when necessary to keep the queue as small as possible
-          if (!dispatchSubjectsQueue.hasJobForSubject(worshipAdministrativeUnit)) {
-            dispatchSubjectsQueue.addJob(worshipAdministrativeUnit, () => dispatch(worshipAdministrativeUnit));
-          }
+    const matchingPublicConfigs = dispatchToPublicGraphConfig.filter(config => types.find(type => type == config.type));
+    const matchingOrgConfigs = dispatchToOrgGraphsConfig.filter(config => types.find(type => type == config.type));
+
+    for (const config of matchingPublicConfigs) {
+      const canBePublic = await isSubjectPublicAfterAdditionalFilters(subject, config);
+
+      if (canBePublic) {
+        if (config.type == REPRESENTATIVE_ORGAN_TYPE) {
+          // ROs need a special treatment, they need extra triples to function with acmidm
+          await insertRepresentativeOrganExtraTriples(subject);
+        }
+
+        // Ensuring we only dispatch data of a worship admin unit when necessary to keep the queue as small as possible
+        if (!DISPATCH_PUBLIC_SUBJECTS_QUEUE.hasJobForSubject(subject)) {
+          DISPATCH_PUBLIC_SUBJECTS_QUEUE.addJob(subject, () => dispatchToPublicGraph(subject));
+        }
+
+        if (config.subjectsToDispatchAfterIngest) {
+          // We need to see if some subjects need to be re-evaluated. In some cases, they gave an additional filter that
+          // depends on other data types
+          const subjects = await getSubjectsToDispatchAfterIngestOfSubject(subject, config.subjectsToDispatchAfterIngest);
+          subjects.forEach(subject => DISPATCH_PUBLIC_SUBJECTS_QUEUE.addJob(subject, () => dispatchToPublicGraph(subject)));
         }
       }
-      catch (e) {
-        console.error(`Error while processing a subject ${subject}: ${e.message ? e.message : e}`);
-        await sendErrorAlert({
-          message: `Error while processing a subject ${subject}: ${e.message ? e.message : e}`
-        });
+    }
+
+    for (const config of matchingOrgConfigs) {
+      const worshipAdministrativeUnit = await getWorshipAdministrativeUnitForSubject(subject, config);
+      if (worshipAdministrativeUnit) {
+        // Ensuring we only dispatch data of a worship admin unit when necessary to keep the queue as small as possible
+        if (!DISPATCH_ORG_SUBJECTS_QUEUE.hasJobForSubject(worshipAdministrativeUnit)) {
+          DISPATCH_ORG_SUBJECTS_QUEUE.addJob(worshipAdministrativeUnit, () => dispatchToOrgGraphs(worshipAdministrativeUnit));
+        }
       }
     }
   } catch (e) {
@@ -91,18 +119,21 @@ async function processSubject(subject) {
   }
 }
 
-async function dispatch(worshipAdministrativeUnit) {
+async function dispatchToPublicGraph(subject) {
+  await copySubjectDataToDestinationGraphs(subject, [PUBLIC_GRAPH]);
+}
+
+async function dispatchToOrgGraphs(worshipAdministrativeUnit) {
   const destinationGraphs = await getDestinationGraphs(worshipAdministrativeUnit);
   if (destinationGraphs.length) {
     let subjects = [worshipAdministrativeUnit];
-    for (const config of exportConfig) {
-      const subject = await getRelatedSubjectsForWorshipAdministrativeUnit(
+    for (const config of dispatchToOrgGraphsConfig) {
+      const relatedSubjects = await getRelatedSubjectsForWorshipAdministrativeUnit(
         worshipAdministrativeUnit,
         config.type,
-        config.pathToWorshipAdminUnit,
-        destinationGraphs
+        config.pathToWorshipAdminUnit
       );
-      subjects.push(...subject);
+      subjects.push(...relatedSubjects);
     }
 
     for(const subject of subjects) {

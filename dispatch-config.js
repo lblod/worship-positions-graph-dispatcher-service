@@ -4,7 +4,7 @@
  * It provides some path template queries as a shorthand to fetch the related subject.
  * See code to check how it is used.
  */
-export default [
+export const dispatchToOrgGraphsConfig = [
   {
     type: `http://data.lblod.info/vocabularies/erediensten/CentraalBestuurVanDeEredienst`,
     pathToWorshipAdminUnit: `?worshipAdministrativeUnit a <http://data.lblod.info/vocabularies/erediensten/CentraalBestuurVanDeEredienst> .\n FILTER(?worshipAdministrativeUnit = ?subject)`
@@ -16,9 +16,15 @@ export default [
   {
     type: `http://data.vlaanderen.be/ns/besluit#Bestuursorgaan`,
     pathToWorshipAdminUnit: `
-      ?subject <https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan> ?orgaan .
-      ?orgaan <http://data.vlaanderen.be/ns/besluit#bestuurt> ?worshipAdministrativeUnit .
+      ?subject (<https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt>)|(<http://data.vlaanderen.be/ns/besluit#bestuurt>) ?worshipAdministrativeUnit . ?worshipAdministrativeUnit <http://www.w3.org/ns/org#classification> ?bestuurClassification .
+      FILTER (?bestuurClassification IN (
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000001>,
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000000>,
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/f9cac08a-13c1-49da-9bcb-f650b0604054>,
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/66ec74fd-8cfc-4e16-99c6-350b35012e86>
+      ))
     `
+
   },
   {
     type: `http://data.vlaanderen.be/ns/mandaat#Mandaat`,
@@ -175,5 +181,88 @@ export default [
         <http://www.w3.org/ns/org#holds> ?position .
       ?worshipAdministrativeUnit <http://data.lblod.info/vocabularies/erediensten/wordtBediendDoor> ?position .
     `
+  },
+
+
+  {
+    type: `http://www.w3.org/ns/org#Site`, // Site of a worship service
+    pathToWorshipAdminUnit: `
+      ?worshipAdministrativeUnit <http://www.w3.org/ns/org#hasPrimarySite>|<http://www.w3.org/ns/org#hasSite> ?subject .
+    `
+  },
+  {
+    type: `http://www.w3.org/ns/locn#Address`, // Address of a site of a worship service
+    pathToWorshipAdminUnit: `
+      ?site <https://data.vlaanderen.be/ns/organisatie#bestaatUit> ?subject .
+      ?worshipAdministrativeUnit <http://www.w3.org/ns/org#hasPrimarySite>|<http://www.w3.org/ns/org#hasSite> ?site .
+    `
+  },
+];
+
+export const dispatchToPublicGraphConfig = [
+  {
+    type: `http://data.vlaanderen.be/ns/besluit#Bestuurseenheid`,
+    additionalFilter: `
+      ?subject a <http://data.vlaanderen.be/ns/besluit#Bestuurseenheid> ;
+        <http://www.w3.org/ns/org#classification> ?bestuurClassification .
+      FILTER (
+        ?bestuurClassification IN (
+          <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000001>,
+          <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000000>
+        )
+      )
+    `,
+    subjectsToDispatchAfterIngest: `
+      ?subject (<https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt>)|(<http://data.vlaanderen.be/ns/besluit#bestuurt>) ?ingestedSubject .
+    `
+  },
+  {
+    type: `http://data.vlaanderen.be/ns/besluit#Bestuursorgaan`,
+    additionalFilter: `
+      ?subject (<https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt>)|(<http://data.vlaanderen.be/ns/besluit#bestuurt>) ?administrativeUnit . ?administrativeUnit <http://www.w3.org/ns/org#classification> ?bestuurClassification .
+      FILTER (?bestuurClassification IN (
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000001>,
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000000>
+      ))
+    `
+  },
+  {
+    type: `http://data.lblod.info/vocabularies/erediensten/RepresentatiefOrgaan`
+  },
+  {
+    type: `http://data.lblod.info/vocabularies/erediensten/BetrokkenLokaleBesturen`
+  },
+  {
+    type: `http://lblod.data.gift/vocabularies/organisatie/BestuurseenheidClassificatieCode`,
+    subjectsToDispatchAfterIngest: `
+      ?subject (<https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt>/<http://www.w3.org/ns/org#classification>)|(<http://data.vlaanderen.be/ns/besluit#bestuurt>/<http://www.w3.org/ns/org#classification>)|(<http://www.w3.org/ns/org#classification>) ?ingestedSubject .
+    `
+  },
+  {
+    type: `http://lblod.data.gift/vocabularies/organisatie/BestuursorgaanClassificatieCode`
+  },
+  {
+    type: `http://lblod.data.gift/vocabularies/organisatie/TypeVestiging`
+  },
+  {
+    type: `http://lblod.data.gift/vocabularies/organisatie/OrganisatieStatusCode`
+  },
+  {
+    type: `http://lblod.data.gift/vocabularies/organisatie/TypeBetrokkenheid`
+  },
+  {
+    type: `http://lblod.data.gift/vocabularies/organisatie/TypeEredienst`
+  },
+  {
+    type: `http://lblod.data.gift/vocabularies/organisatie/BestuursfunctieCode`
+  },
+  {
+    type: `http://lblod.data.gift/vocabularies/organisatie/EredienstBeroepen`
+  },
+  {
+    type: `http://mu.semte.ch/vocabularies/ext/GeslachtCode`
+  },
+  {
+    type: `http://publications.europa.eu/ontology/euvoc#Country`
   }
 ];
