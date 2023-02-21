@@ -130,21 +130,42 @@ export async function copySubjectDataToDestinationGraphs(subject, destinationGra
   for (const destinationGraph of destinationGraphs) {
     insertInGraphs += `
       GRAPH ${sparqlEscapeUri(destinationGraph)} {
-        ?s ?p ?o.
+        ?s ?p ?o .
       }
     `;
   }
 
-  const queryStr = `
+  // Insert in the destination graphs
+  const insertQueryStr = `
     INSERT {
       ${insertInGraphs}
     }
     WHERE {
       BIND(${sparqlEscapeUri(subject)} as ?s)
-      ?s ?p ?o.
+      ?s ?p ?o .
     }
   `;
-  await update(queryStr);
+  await update(insertQueryStr);
+
+  // Delete triples in graphs that are not in the destination graphs list
+  destinationGraphs.push(DISPATCH_SOURCE_GRAPH);
+  const graphsToKeep = `<${destinationGraphs.join('>, <')}>`;
+
+  const deleteQueryStr = `
+    DELETE {
+      GRAPH ?g {
+        ?s ?p ?o .
+      }
+    }
+    WHERE {
+      GRAPH ?g {
+        BIND(${sparqlEscapeUri(subject)} as ?s)
+        ?s ?p ?o .
+      }
+      FILTER (?g NOT IN ( ${graphsToKeep} ))
+    }
+  `;
+  await update(deleteQueryStr);
 }
 
 export async function sendErrorAlert({message, detail, reference}) {
@@ -198,17 +219,6 @@ export async function getSubjectsToDispatchAfterIngestOfSubject(ingestedSubject,
       BIND(${sparqlEscapeUri(ingestedSubject)} as ?ingestedSubject)
 
       ${path}
-
-      GRAPH ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)} {
-        ?subject ?p ?o .
-      }
-      MINUS
-      {
-        GRAPH ?g {
-          ?subject ?p ?o .
-        }
-        FILTER (?g != ${sparqlEscapeUri(DISPATCH_SOURCE_GRAPH)})
-      }
     }
   `;
 

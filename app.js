@@ -93,11 +93,25 @@ async function processSubject(subject) {
           DISPATCH_PUBLIC_SUBJECTS_QUEUE.addJob(subject, () => dispatchToPublicGraph(subject));
         }
 
-        if (config.subjectsToDispatchAfterIngest) {
-          // We need to see if some subjects need to be re-evaluated. In some cases, they gave an additional filter that
-          // depends on other data types
-          const subjects = await getSubjectsToDispatchAfterIngestOfSubject(subject, config.subjectsToDispatchAfterIngest);
-          subjects.forEach(subject => DISPATCH_PUBLIC_SUBJECTS_QUEUE.addJob(subject, () => dispatchToPublicGraph(subject)));
+        // We need to see if some subjects need to be re-evaluated. In some cases, the previously dispatched data
+        // can fix broken paths to dispatch other data types
+        if (config.triggersPublicDispatchFor && config.triggersPublicDispatchFor.length) {
+          let publicSubjects = [];
+          for (const path of config.triggersPublicDispatchFor) {
+            const newSubjectsToDispatch = await getSubjectsToDispatchAfterIngestOfSubject(subject, path);
+            publicSubjects.push(...newSubjectsToDispatch);
+          }
+          publicSubjects.forEach(subject => DISPATCH_PUBLIC_SUBJECTS_QUEUE.addJob(subject, () => dispatchToPublicGraph(subject)));
+        }
+
+        // Same for the org graphs
+        if (config.triggersOrgDispatchFor && config.triggersOrgDispatchFor.length) {
+          let orgSubjects = [];
+          for (const path of config.triggersOrgDispatchFor) {
+            const newSubjectsToDispatch = await getSubjectsToDispatchAfterIngestOfSubject(subject, path);
+            orgSubjects.push(...newSubjectsToDispatch);
+          }
+          orgSubjects.forEach(subject => DISPATCH_ORG_SUBJECTS_QUEUE.addJob(subject, () => dispatchToOrgGraphs(subject)));
         }
       }
     }

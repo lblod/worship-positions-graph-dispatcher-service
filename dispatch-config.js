@@ -18,13 +18,10 @@ export const dispatchToOrgGraphsConfig = [
     pathToWorshipAdminUnit: `
       ?subject (<https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt>)|(<http://data.vlaanderen.be/ns/besluit#bestuurt>) ?worshipAdministrativeUnit . ?worshipAdministrativeUnit <http://www.w3.org/ns/org#classification> ?bestuurClassification .
       FILTER (?bestuurClassification IN (
-        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000001>,
-        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000000>,
         <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/f9cac08a-13c1-49da-9bcb-f650b0604054>,
         <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/66ec74fd-8cfc-4e16-99c6-350b35012e86>
       ))
     `
-
   },
   {
     type: `http://data.vlaanderen.be/ns/mandaat#Mandaat`,
@@ -182,8 +179,6 @@ export const dispatchToOrgGraphsConfig = [
       ?worshipAdministrativeUnit <http://data.lblod.info/vocabularies/erediensten/wordtBediendDoor> ?position .
     `
   },
-
-
   {
     type: `http://www.w3.org/ns/org#Site`, // Site of a worship service
     pathToWorshipAdminUnit: `
@@ -205,16 +200,25 @@ export const dispatchToPublicGraphConfig = [
     additionalFilter: `
       ?subject a <http://data.vlaanderen.be/ns/besluit#Bestuurseenheid> ;
         <http://www.w3.org/ns/org#classification> ?bestuurClassification .
-      FILTER (
-        ?bestuurClassification IN (
+      FILTER (?bestuurClassification IN (
           <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000001>,
           <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000000>
         )
       )
     `,
-    subjectsToDispatchAfterIngest: `
-      ?subject (<https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt>)|(<http://data.vlaanderen.be/ns/besluit#bestuurt>) ?ingestedSubject .
-    `
+    triggersPublicDispatchFor: [
+      `?subject <https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt> ?ingestedSubject .`,
+      `?subject <http://data.vlaanderen.be/ns/besluit#bestuurt> ?ingestedSubject .`,
+    ],
+    triggersOrgDispatchFor: [
+      `?ingestedSubject <http://www.w3.org/ns/org#classification> ?classification ;
+        <http://data.lblod.info/vocabularies/erediensten/betrokkenBestuur>/<http://www.w3.org/ns/org#organization> ?subject .
+
+      FILTER (?classification IN (
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000000>,
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000001>
+      ))`,
+    ]
   },
   {
     type: `http://data.vlaanderen.be/ns/besluit#Bestuursorgaan`,
@@ -227,16 +231,33 @@ export const dispatchToPublicGraphConfig = [
     `
   },
   {
-    type: `http://data.lblod.info/vocabularies/erediensten/RepresentatiefOrgaan`
+    type: `http://data.lblod.info/vocabularies/erediensten/RepresentatiefOrgaan`,
+    triggersOrgDispatchFor: [
+      `?ingestedSubject <http://www.w3.org/ns/org#linkedTo> ?subject .`,
+    ]
   },
   {
-    type: `http://data.lblod.info/vocabularies/erediensten/BetrokkenLokaleBesturen`
+    type: `http://data.lblod.info/vocabularies/erediensten/BetrokkenLokaleBesturen`,
+    triggersOrgDispatchFor: [
+      `?ingestedSubject <http://www.w3.org/ns/org#organization> ?subject .`,
+    ]
   },
   {
     type: `http://lblod.data.gift/vocabularies/organisatie/BestuurseenheidClassificatieCode`,
-    subjectsToDispatchAfterIngest: `
-      ?subject (<https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt>/<http://www.w3.org/ns/org#classification>)|(<http://data.vlaanderen.be/ns/besluit#bestuurt>/<http://www.w3.org/ns/org#classification>)|(<http://www.w3.org/ns/org#classification>) ?ingestedSubject .
-    `
+    triggersPublicDispatchFor: [
+      `?subject <https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt>/<http://www.w3.org/ns/org#classification> ?ingestedSubject .`,
+      `?subject <http://data.vlaanderen.be/ns/besluit#bestuurt>/<http://www.w3.org/ns/org#classification> ?ingestedSubject .`,
+      `?subject <http://www.w3.org/ns/org#classification> ?ingestedSubject .`,
+    ],
+    triggersOrgDispatchFor: [
+      `?bestuur <http://www.w3.org/ns/org#classification> ?ingestedSubject ;
+        <http://data.lblod.info/vocabularies/erediensten/betrokkenBestuur>/<http://www.w3.org/ns/org#organization> ?subject .
+
+        FILTER (?ingestedSubject IN (
+          <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000000>,
+          <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000001>
+        ))`,
+    ]
   },
   {
     type: `http://lblod.data.gift/vocabularies/organisatie/BestuursorgaanClassificatieCode`
