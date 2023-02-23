@@ -1,9 +1,3 @@
-/*
- * This file is used as helper for fetching subjects related to a worship administrative unit
- * (ere:BestuurVanDeEredienst or ere:CentraalBestuurVanDeEredienst).
- * It provides some path template queries as a shorthand to fetch the related subject.
- * See code to check how it is used.
- */
 export const dispatchToOrgGraphsConfig = [
   {
     type: `http://data.lblod.info/vocabularies/erediensten/CentraalBestuurVanDeEredienst`,
@@ -198,19 +192,19 @@ export const dispatchToPublicGraphConfig = [
   {
     type: `http://data.vlaanderen.be/ns/besluit#Bestuurseenheid`,
     additionalFilter: `
-      ?subject a <http://data.vlaanderen.be/ns/besluit#Bestuurseenheid> ;
-        <http://www.w3.org/ns/org#classification> ?bestuurClassification .
+      ?subject <http://www.w3.org/ns/org#classification> ?bestuurClassification .
+
       FILTER (?bestuurClassification IN (
           <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000001>,
           <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000000>
         )
       )
     `,
-    triggersPublicDispatchFor: [
+    triggersPublicRedispatchFor: [
       `?subject <https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt> ?ingestedSubject .`,
       `?subject <http://data.vlaanderen.be/ns/besluit#bestuurt> ?ingestedSubject .`,
     ],
-    triggersOrgDispatchFor: [
+    triggersOrgRedispatchFor: [
       `?ingestedSubject <http://www.w3.org/ns/org#classification> ?classification ;
         <http://data.lblod.info/vocabularies/erediensten/betrokkenBestuur>/<http://www.w3.org/ns/org#organization> ?subject .
 
@@ -232,24 +226,24 @@ export const dispatchToPublicGraphConfig = [
   },
   {
     type: `http://data.lblod.info/vocabularies/erediensten/RepresentatiefOrgaan`,
-    triggersOrgDispatchFor: [
+    triggersOrgRedispatchFor: [
       `?ingestedSubject <http://www.w3.org/ns/org#linkedTo> ?subject .`,
     ]
   },
   {
     type: `http://data.lblod.info/vocabularies/erediensten/BetrokkenLokaleBesturen`,
-    triggersOrgDispatchFor: [
+    triggersOrgRedispatchFor: [
       `?ingestedSubject <http://www.w3.org/ns/org#organization> ?subject .`,
     ]
   },
   {
     type: `http://lblod.data.gift/vocabularies/organisatie/BestuurseenheidClassificatieCode`,
-    triggersPublicDispatchFor: [
+    triggersPublicRedispatchFor: [
       `?subject <https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt>/<http://www.w3.org/ns/org#classification> ?ingestedSubject .`,
       `?subject <http://data.vlaanderen.be/ns/besluit#bestuurt>/<http://www.w3.org/ns/org#classification> ?ingestedSubject .`,
       `?subject <http://www.w3.org/ns/org#classification> ?ingestedSubject .`,
     ],
-    triggersOrgDispatchFor: [
+    triggersOrgRedispatchFor: [
       `?bestuur <http://www.w3.org/ns/org#classification> ?ingestedSubject ;
         <http://data.lblod.info/vocabularies/erediensten/betrokkenBestuur>/<http://www.w3.org/ns/org#organization> ?subject .
 
