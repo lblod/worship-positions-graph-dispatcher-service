@@ -26,14 +26,6 @@ export const dispatchToOrgGraphsConfig = [
     `
   },
   {
-    type: `http://data.vlaanderen.be/ns/mandaat#Mandaat`,
-    pathToWorshipAdminUnit: `
-      ?orgaanInTime <http://www.w3.org/ns/org#hasPost> ?subject ;
-        <https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan> ?orgaan .
-      ?orgaan <http://data.vlaanderen.be/ns/besluit#bestuurt> ?worshipAdministrativeUnit .
-    `
-  },
-  {
     type: `http://data.lblod.info/vocabularies/erediensten/PositieBedienaar`,
     pathToWorshipAdminUnit: `
       ?worshipAdministrativeUnit <http://data.lblod.info/vocabularies/erediensten/wordtBediendDoor> ?subject .
