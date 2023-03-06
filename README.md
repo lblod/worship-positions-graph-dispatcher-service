@@ -37,6 +37,12 @@ export default [
 ]
 ```
 
+## Initial dispatch
+
+When starting the service, before dispatching the incoming deltas to the proper graphs, the service will check if an initial dispatching needs to happen. For this, it will check if the two related consumers (`worship-services-sensitive-consumer` and `worship-posts-consumer`) of the related application [app-worship-organizations](https://github.com/lblod/app-worship-organizations) have finished putting all ingested data into the ingest graph.
+
+The service then proceeds to doing an initial dispatching. The goal is to reduce the time needed for the initial sync : bypassing mu-auth for this step makes the initial sync substantially faster.
+
 ## API
 
 ### POST /delta
