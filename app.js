@@ -2,6 +2,7 @@ import bodyParser from "body-parser";
 import { app } from "mu";
 import { Delta } from "./lib/delta";
 import { ProcessingQueue } from './lib/processing-queue';
+import { Prerequisite } from "./lib/prerequisite";
 import {
   sendErrorAlert,
   getTypesForSubject,
@@ -10,19 +11,17 @@ import {
   copySubjectDataToDestinationGraphs,
   getRelatedSubjectsForWorshipAdministrativeUnit,
   isSubjectPublicAfterAdditionalFilters,
-  insertRepresentativeOrganExtraTriples,
-  getSubjectsToRedispatchToPublicGraph,
-  getSubjectsToRedispatchToOrgGraph
-} from "./util/queries";
+  insertRepresentativeOrganExtraTriples
+} from "./lib/queries";
 import {
   dispatchToOrgGraphsConfig,
   dispatchToPublicGraphConfig
 } from "./dispatch-config";
 import { PUBLIC_GRAPH } from "./config"
 
-const PROCESS_SUBJECT_QUEUE = new ProcessingQueue('worship-positions-process-queue');
-const DISPATCH_PUBLIC_SUBJECTS_QUEUE = new ProcessingQueue('worship-positions-public-dispatch-queue');
-const DISPATCH_ORG_SUBJECTS_QUEUE = new ProcessingQueue('worship-positions-org-dispatch-queue');
+const PROCESSING_QUEUE = new ProcessingQueue('worship-positions-process-queue', {
+  prerequisite: new Prerequisite()
+});
 
 const REPRESENTATIVE_ORGAN_TYPE = 'http://data.lblod.info/vocabularies/erediensten/RepresentatiefOrgaan';
 
@@ -53,41 +52,25 @@ app.get("/", function (req, res) {
 app.post("/delta", async function (req, res) {
   const delta = new Delta(req.body);
 
-  let insertSubjects = [];
-  let deleteSubjects = [];
-  let uniqueSubjects = [];
-
-  // All inserts trigger the dispatching mechanism
-  const inserts = delta.inserts;
-  if (inserts && inserts.length) {
-    insertSubjects = inserts.map(insert => insert.subject.value);
-  }
-
-  // Some deletes as well: the deletes that might impact who can see which worship admin unit
-  // In this special case it happens when a link between a RO and a worship admin unit gets deleted,
-  // or when the link between a betrokken lokale bestuur and a worship admin unit gets deleted.
-  const deletes = delta.deletes;
-  if (deletes && deletes.length) {
-    let filteredDeletes = deletes.filter(triple => triple.predicate.value == "http://www.w3.org/ns/org#linkedTo" ||
-      triple.predicate.value == "http://www.w3.org/ns/org#organization"
+  if (!delta.inserts.length) {
+    console.log(
+      "Delta does not contain any insertions. Nothing should happen."
     );
-    deleteSubjects = filteredDeletes.map(triple => triple.subject.value);
+    return res.status(204).send();
   }
 
-  uniqueSubjects.push(...new Set(insertSubjects), ...new Set(deleteSubjects));
+  const inserts = delta.inserts;
+  const subjects = inserts.map(insert => insert.subject.value);
+  const uniqueSubjects = [ ...new Set(subjects) ];
 
   for (const subject of uniqueSubjects) {
     // Ensuring we only process a subject when necessary to keep the queue as small as possible
-    if (!PROCESS_SUBJECT_QUEUE.hasJobForSubject(subject)) {
-      PROCESS_SUBJECT_QUEUE.addJob(subject, () => processSubject(subject));
+    if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
+      PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
     }
   }
   return res.status(200).send();
 });
-
-// ----------------------------------------------------------------------
-// ------------------------------ INTERNAL ------------------------------
-// ----------------------------------------------------------------------
 
 /**
  * Processes a subject by finding if it should be dispatched and where
@@ -121,10 +104,7 @@ async function processPublicSubject(subject, matchingPublicConfigs) {
         await insertRepresentativeOrganExtraTriples(subject);
       }
 
-      // Ensuring we only dispatch data of a worship admin unit when necessary to keep the queue as small as possible
-      if (!DISPATCH_PUBLIC_SUBJECTS_QUEUE.hasJobForSubject(subject)) {
-        DISPATCH_PUBLIC_SUBJECTS_QUEUE.addJob(subject, () => dispatchToPublicGraph(subject, config));
-      }
+      await dispatchToPublicGraph(subject, config);
     }
   }
 }
@@ -133,10 +113,7 @@ async function processOrgSubject(subject, matchingOrgConfigs) {
   for (const config of matchingOrgConfigs) {
     const worshipAdministrativeUnit = await getWorshipAdministrativeUnitForSubject(subject, config);
     if (worshipAdministrativeUnit) {
-      // Ensuring we only dispatch data of a worship admin unit when necessary to keep the queue as small as possible
-      if (!DISPATCH_ORG_SUBJECTS_QUEUE.hasJobForSubject(worshipAdministrativeUnit)) {
-        DISPATCH_ORG_SUBJECTS_QUEUE.addJob(worshipAdministrativeUnit, () => dispatchToOrgGraphs(worshipAdministrativeUnit));
-      }
+      await dispatchToOrgGraphs(worshipAdministrativeUnit);
     }
   }
 }
@@ -155,8 +132,8 @@ async function dispatchToPublicGraph(subject, config) {
 
     subjects.forEach(subject => {
       // Ensuring we only process data when necessary to keep the queue as small as possible
-      if (!PROCESS_SUBJECT_QUEUE.hasJobForSubject(subject)) {
-        PROCESS_SUBJECT_QUEUE.addJob(subject, () => processSubject(subject));
+      if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
+        PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
       }
     });
   }
@@ -170,8 +147,8 @@ async function dispatchToPublicGraph(subject, config) {
 
     subjects.forEach(subject => {
       // Ensuring we only process data when necessary to keep the queue as small as possible
-      if (!PROCESS_SUBJECT_QUEUE.hasJobForSubject(subject)) {
-        PROCESS_SUBJECT_QUEUE.addJob(subject, () => processSubject(subject));
+      if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
+        PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
       }
     });
   }
