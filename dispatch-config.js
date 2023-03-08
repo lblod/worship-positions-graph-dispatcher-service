@@ -229,6 +229,34 @@ export const dispatchToPublicGraphConfig = [
     ]
   },
   {
+    type: `http://www.w3.org/ns/adms#Identifier`,
+    additionalFilter: `
+      ?bestuur <http://www.w3.org/ns/adms#identifier> ?subject ;
+        <http://www.w3.org/ns/org#classification> ?bestuurClassification .
+
+      FILTER (?bestuurClassification IN (
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000001>,
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000000>,
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/36372fad-0358-499c-a4e3-f412d2eae213>
+      ))
+    `
+  },
+  {
+    type: `https://data.vlaanderen.be/ns/generiek#GestructureerdeIdentificator`, 
+    additionalFilter: `
+      ?bestuur <http://www.w3.org/ns/adms#identifier> ?id ;
+        <http://www.w3.org/ns/org#classification> ?bestuurClassification .
+
+      ?id <https://data.vlaanderen.be/ns/generiek#gestructureerdeIdentificator> ?subject .
+
+      FILTER (?bestuurClassification IN (
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000001>,
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/5ab0e9b8a3b2ca7c5e000000>,
+        <http://data.vlaanderen.be/id/concept/BestuurseenheidClassificatieCode/36372fad-0358-499c-a4e3-f412d2eae213>
+      ))
+    `
+  },
+  {
     type: `http://lblod.data.gift/vocabularies/organisatie/BestuurseenheidClassificatieCode`,
     triggersPublicRedispatchFor: [
       `?subject <https://data.vlaanderen.be/ns/generiek#isTijdspecialisatieVan>/<http://data.vlaanderen.be/ns/besluit#bestuurt>/<http://www.w3.org/ns/org#classification> ?ingestedSubject .`,

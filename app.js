@@ -11,7 +11,9 @@ import {
   copySubjectDataToDestinationGraphs,
   getRelatedSubjectsForWorshipAdministrativeUnit,
   isSubjectPublicAfterAdditionalFilters,
-  insertRepresentativeOrganExtraTriples
+  insertRepresentativeOrganExtraTriples,
+  insertKboForAcmidm,
+  getSubjectsToRedispatchToOrgGraph
 } from "./lib/queries";
 import {
   dispatchToOrgGraphsConfig,
@@ -24,6 +26,7 @@ const PROCESSING_QUEUE = new ProcessingQueue('worship-positions-process-queue', 
 });
 
 const REPRESENTATIVE_ORGAN_TYPE = 'http://data.lblod.info/vocabularies/erediensten/RepresentatiefOrgaan';
+const STRUCTURED_IDENTIFIER_TYPE = 'https://data.vlaanderen.be/ns/generiek#GestructureerdeIdentificator';
 
 app.use(
   bodyParser.json({
@@ -102,6 +105,11 @@ async function processPublicSubject(subject, matchingPublicConfigs) {
       if (config.type == REPRESENTATIVE_ORGAN_TYPE) {
         // ROs need a special treatment, they need extra triples to function with acmidm
         await insertRepresentativeOrganExtraTriples(subject);
+      }
+
+      if (config.type == STRUCTURED_IDENTIFIER_TYPE) {
+        // KBOs need to be modeled differently to fit with acmidm requirements
+        await insertKboForAcmidm(subject);
       }
 
       await dispatchToPublicGraph(subject, config);
