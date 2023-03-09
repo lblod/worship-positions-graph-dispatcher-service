@@ -13,7 +13,8 @@ import {
   isSubjectPublicAfterAdditionalFilters,
   insertRepresentativeOrganExtraTriples,
   insertKboForAcmidm,
-  getSubjectsToRedispatchToOrgGraph
+  getSubjectsToRedispatchToOrgGraph,
+  getSubjectsToRedispatchToPublicGraph
 } from "./lib/queries";
 import {
   dispatchToOrgGraphsConfig,
