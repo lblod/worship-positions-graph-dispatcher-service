@@ -8,7 +8,7 @@ import {
   getTypesForSubject,
   getWorshipAdministrativeUnitForSubject,
   getDestinationGraphs,
-  copySubjectDataToDestinationGraphs,
+  moveSubjectDataToDestinationGraphs,
   getRelatedSubjectsForWorshipAdministrativeUnit,
   isSubjectPublicAfterAdditionalFilters,
   insertRepresentativeOrganExtraTriples,
@@ -128,7 +128,7 @@ async function processOrgSubject(subject, matchingOrgConfigs) {
 }
 
 async function dispatchToPublicGraph(subject, config) {
-  await copySubjectDataToDestinationGraphs(subject, [PUBLIC_GRAPH]);
+  await moveSubjectDataToDestinationGraphs(subject, [PUBLIC_GRAPH]);
 
   // We need to see if some subjects need to be re-evaluated. In some cases, the previously dispatched data
   // can fix broken paths to dispatch other data types
@@ -178,7 +178,7 @@ async function dispatchToOrgGraphs(worshipAdministrativeUnit) {
     }
 
     for(const subject of subjects) {
-      await copySubjectDataToDestinationGraphs(subject, destinationGraphs);
+      await moveSubjectDataToDestinationGraphs(subject, destinationGraphs);
     }
   }
 }
