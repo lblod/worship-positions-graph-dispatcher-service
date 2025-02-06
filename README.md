@@ -37,6 +37,13 @@ export default [
 ]
 ```
 
+## Environment variables
+
+The following environment variables can be configured:
+
+- `LANDING_ZONE_GRAPHS`: The graphs where the consumers first put the consumed data, separated by a ",". Defaults to 'http://mu.semte.ch/graphs/landing-zone/worship-services-sensitive,http://mu.semte.ch/graphs/landing-zone/worship-posts'
+- `DISPATCH_SOURCE_GRAPH`: The graphs from which we want to dispatch the triples. Defaults to 'http://mu.semte.ch/graphs/ingest'
+
 ## Initial dispatch
 
 When starting the service, before dispatching the incoming deltas to the proper graphs, the service will check if an initial dispatching needs to happen. For this, it will check if the two related consumers (`worship-services-sensitive-consumer` and `worship-posts-consumer`) of the related application [app-worship-organizations](https://github.com/lblod/app-worship-organizations) have finished putting all ingested data into the ingest graph.
