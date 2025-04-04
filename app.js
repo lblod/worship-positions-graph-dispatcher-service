@@ -56,15 +56,9 @@ app.get("/", function (req, res) {
 app.post("/delta", async function (req, res) {
   const delta = new Delta(req.body);
 
-  if (!delta.inserts.length) {
-    console.log(
-      "Delta does not contain any insertions. Nothing should happen."
-    );
-    return res.status(204).send();
-  }
-
   const inserts = delta.inserts;
-  const subjects = inserts.map(insert => insert.subject.value);
+  const deletes = delta.deletes;
+  const subjects = [...inserts.map(insert => insert.subject.value), ...deletes.map(insert => insert.subject.value)];
   const uniqueSubjects = [ ...new Set(subjects) ];
 
   for (const subject of uniqueSubjects) {
