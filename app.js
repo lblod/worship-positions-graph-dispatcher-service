@@ -14,13 +14,14 @@ import {
   insertRepresentativeOrganExtraTriples,
   insertKboForAcmidm,
   getSubjectsToRedispatchToOrgGraph,
-  getSubjectsToRedispatchToPublicGraph
+  getSubjectsToRedispatchToPublicGraph,
+  getSubjectsInDispatchSourceGraphByTypes
 } from "./lib/queries";
 import {
   dispatchToOrgGraphsConfig,
   dispatchToPublicGraphConfig
 } from "./dispatch-config";
-import { PUBLIC_GRAPH } from "./config"
+import { PUBLIC_GRAPH, DISPATCH_SOURCE_GRAPH } from "./config"
 
 const PROCESSING_QUEUE = new ProcessingQueue('worship-positions-process-queue', {
   prerequisite: new Prerequisite()
@@ -69,6 +70,59 @@ app.post("/delta", async function (req, res) {
   }
   return res.status(200).send();
 });
+
+/***********************************************
+ * DEBUG/RESCUE ENDPOINTS
+ * Not meant to be exposed
+ * Note: GET calls with side effects (sorry)
+ ***********************************************/
+
+/**
+ * Triggers the dispatch process manually.
+ * This is intended for scenarios such as debugging, restarting failed initial syncs,
+ * or re-dispatching subjects that encountered issues during dispatching.
+ *
+ * The dispatch logic itself takes care of clearing data from non-source graphs
+ * before re-inserting, so a re-run is sufficient to correct misplaced data.
+ *
+ * @route GET /manual-dispatch
+ * @param {string} [subject] - The URI of a specific subject to (re-)dispatch.
+ *   If omitted, all subjects in DISPATCH_SOURCE_GRAPH whose type appears in the
+ *   dispatch configuration will be (re-)dispatched.
+ * @returns {Object} 201 - Empty response indicating dispatch has been scheduled.
+ */
+app.get("/manual-dispatch", async function (req, res) {
+  if (req.query.subject) {
+    const subject = req.query.subject;
+    console.log(`Only one subject to (re-)dispatch: ${subject}`);
+    if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
+      PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
+    }
+    console.log(`Scheduling done`);
+    return res.status(201).send();
+  }
+
+  console.log(`Dispatching all configured subjects (again) from GRAPH ${DISPATCH_SOURCE_GRAPH}`);
+  const configuredTypes = [
+    ...dispatchToOrgGraphsConfig.map(c => c.type),
+    ...dispatchToPublicGraphConfig.map(c => c.type)
+  ];
+  const subjects = await getSubjectsInDispatchSourceGraphByTypes(configuredTypes);
+  console.log(`Found ${subjects.length} subjects to (re-)dispatch.`);
+  console.log(`This might take a while; big amount can take big time`);
+
+  for (const subject of subjects) {
+    if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
+      PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
+    }
+  }
+  console.log(`Scheduling done`);
+  return res.status(201).send();
+});
+
+/***********************************************
+ * END DEBUG/RESCUE ENDPOINTS
+ ***********************************************/
 
 /**
  * Processes a subject by finding if it should be dispatched and where
