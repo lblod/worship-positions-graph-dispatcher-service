@@ -2,7 +2,7 @@ steps:
   release:
     image: woodpeckerci/plugin-docker-buildx
     settings:
-      repo: ${CI_REPO}
+      repo: "${CI_REPO_OWNER%%io}/${CI_REPO_NAME}"
       tags: "${CI_COMMIT_TAG##v}"
       username:
         from_secret: docker_username
@@ -11,3 +11,4 @@ steps:
 when:
   - event: tag
     ref: refs/tags/v*
+
