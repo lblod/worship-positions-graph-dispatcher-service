@@ -43,6 +43,7 @@ The following environment variables can be configured:
 
 - `LANDING_ZONE_GRAPHS`: The graphs where the consumers first put the consumed data, separated by a ",". Defaults to 'http://mu.semte.ch/graphs/landing-zone/worship-services-sensitive,http://mu.semte.ch/graphs/landing-zone/worship-posts'
 - `DISPATCH_SOURCE_GRAPH`: The graphs from which we want to dispatch the triples. Defaults to 'http://mu.semte.ch/graphs/ingest'
+- `MANUAL_DISPATCH_BATCH_SIZE`: Page size used when enumerating subjects for the `/manual-dispatch` endpoint. Each configured type is queried separately and paginated with this `LIMIT`. Defaults to `100`.
 
 ## Initial dispatch
 
@@ -72,13 +73,13 @@ Manually triggers the dispatch process. The dispatch logic clears data from non-
 
 Re-dispatch a single subject:
 ```bash
-curl -G "http://localhost/positions-dispatcher/manual-dispatch" \
+curl -G "http://localhost/manual-dispatch" \
   --data-urlencode "subject=http://data.lblod.info/id/some-subject/123"
 ```
 
 Re-dispatch everything:
 ```bash
-curl "http://localhost/positions-dispatcher/manual-dispatch"
+curl "http://localhost/manual-dispatch"
 ```
 
 ## Configuration
