@@ -87,9 +87,13 @@ app.post("/delta", async function (req, res) {
  *
  * @route GET /manual-dispatch
  * @param {string} [subject] - The URI of a specific subject to (re-)dispatch.
- *   If omitted, all subjects in DISPATCH_SOURCE_GRAPH whose type appears in the
- *   dispatch configuration will be (re-)dispatched.
+ *   Takes precedence over `type` if both are provided.
+ * @param {string} [type] - A configured dispatch type URI. If provided, only
+ *   subjects of that type in DISPATCH_SOURCE_GRAPH will be (re-)dispatched.
+ *   Without `subject` and without `type`, every subject in DISPATCH_SOURCE_GRAPH
+ *   whose type appears in the dispatch configuration will be (re-)dispatched.
  * @returns {Object} 201 - Empty response indicating dispatch has been scheduled.
+ * @returns {Object} 400 - When the supplied `type` isn't a configured dispatch type.
  */
 app.get("/manual-dispatch", async function (req, res) {
   let scheduled = 0;
@@ -104,14 +108,30 @@ app.get("/manual-dispatch", async function (req, res) {
     return res.status(201).send();
   }
 
-  console.log(`Dispatching all configured subjects (again) from GRAPH ${DISPATCH_SOURCE_GRAPH}`);
   const configuredTypes = [
-    ...dispatchToOrgGraphsConfig.map(c => c.type),
-    ...dispatchToPublicGraphConfig.map(c => c.type)
+    ...new Set([
+      ...dispatchToOrgGraphsConfig.map(c => c.type),
+      ...dispatchToPublicGraphConfig.map(c => c.type)
+    ])
   ];
-  const subjects = await getSubjectsInDispatchSourceGraphByTypes(configuredTypes);
+
+  let typesToDispatch;
+  if (req.query.type) {
+    if (!configuredTypes.includes(req.query.type)) {
+      return res.status(400).send({
+        message: `Type "${req.query.type}" is not a configured dispatch type.`,
+        configuredTypes
+      });
+    }
+    typesToDispatch = [req.query.type];
+    console.log(`Dispatching subjects of type ${req.query.type} from GRAPH ${DISPATCH_SOURCE_GRAPH}`);
+  } else {
+    typesToDispatch = configuredTypes;
+    console.log(`Dispatching all configured subjects (again) from GRAPH ${DISPATCH_SOURCE_GRAPH}`);
+  }
+
+  const subjects = await getSubjectsInDispatchSourceGraphByTypes(typesToDispatch);
   console.log(`Found ${subjects.length} subjects to (re-)dispatch.`);
-  console.log(`This might take a while; big amount can take big time`);
 
   for (const subject of subjects) {
     if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {

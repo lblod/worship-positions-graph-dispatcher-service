@@ -67,7 +67,9 @@ Manually triggers the dispatch process. The dispatch logic clears data from non-
 
 **Usage:**
 - To dispatch a specific subject, provide `?subject=http://example/subjects/123`.
+- To restrict the run to a single configured type, provide `?type=<type-uri>`. The type must appear in `dispatch-config.js`; otherwise the endpoint returns a 400 with the list of accepted types.
 - Without query parameters, the endpoint re-dispatches all subjects in `DISPATCH_SOURCE_GRAPH` whose type matches one of the types declared in `dispatch-config.js` (org or public).
+- If both `subject` and `type` are provided, `subject` wins.
 
 **Examples:**
 
@@ -75,6 +77,12 @@ Re-dispatch a single subject:
 ```bash
 curl -G "http://localhost/manual-dispatch" \
   --data-urlencode "subject=http://data.lblod.info/id/some-subject/123"
+```
+
+Re-dispatch every subject of one type (e.g. all `EredienstMandataris`):
+```bash
+curl -G "http://localhost/manual-dispatch" \
+  --data-urlencode "type=http://data.lblod.info/vocabularies/erediensten/EredienstMandataris"
 ```
 
 Re-dispatch everything:
