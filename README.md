@@ -56,6 +56,31 @@ The service then proceeds to doing an initial dispatching. The goal is to reduce
 
 Triggers the processing and dispatching of data following configuration in `disptch-config.js`
 
+#### DEBUG API
+
+The debug API provides endpoints to assist with troubleshooting and resolving issues related to dispatching. Don't expose this API in production.
+
+##### GET `/manual-dispatch`
+
+Manually triggers the dispatch process. The dispatch logic clears data from non-source graphs before re-inserting, so a manual run is enough to correct misplaced data.
+
+**Usage:**
+- To dispatch a specific subject, provide `?subject=http://example/subjects/123`.
+- Without query parameters, the endpoint re-dispatches all subjects in `DISPATCH_SOURCE_GRAPH` whose type matches one of the types declared in `dispatch-config.js` (org or public).
+
+**Examples:**
+
+Re-dispatch a single subject:
+```bash
+curl -G "http://localhost/positions-dispatcher/manual-dispatch" \
+  --data-urlencode "subject=http://data.lblod.info/id/some-subject/123"
+```
+
+Re-dispatch everything:
+```bash
+curl "http://localhost/positions-dispatcher/manual-dispatch"
+```
+
 ## Configuration
 
 The dispatching can be customized in the `disptch-config.js` file. Below you can find a commented exemple of how the configuration works.
