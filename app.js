@@ -92,13 +92,15 @@ app.post("/delta", async function (req, res) {
  * @returns {Object} 201 - Empty response indicating dispatch has been scheduled.
  */
 app.get("/manual-dispatch", async function (req, res) {
+  let scheduled = 0;
   if (req.query.subject) {
     const subject = req.query.subject;
     console.log(`Only one subject to (re-)dispatch: ${subject}`);
     if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
       PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
+      scheduled += 1;
     }
-    console.log(`Scheduling done`);
+    console.log(`Scheduling done. Newly scheduled: ${scheduled}. Queue size: ${PROCESSING_QUEUE.size()}.`);
     return res.status(201).send();
   }
 
@@ -114,9 +116,10 @@ app.get("/manual-dispatch", async function (req, res) {
   for (const subject of subjects) {
     if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
       PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
+      scheduled += 1;
     }
   }
-  console.log(`Scheduling done`);
+  console.log(`Scheduling done. Newly scheduled: ${scheduled}. Queue size: ${PROCESSING_QUEUE.size()}.`);
   return res.status(201).send();
 });
 

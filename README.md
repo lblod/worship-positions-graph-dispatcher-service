@@ -82,6 +82,8 @@ Re-dispatch everything:
 curl "http://localhost/manual-dispatch"
 ```
 
+While the queue drains, the service logs each job with its subject, duration, and the number of jobs still queued, so progress can be followed via the container logs.
+
 ## Configuration
 
 The dispatching can be customized in the `disptch-config.js` file. Below you can find a commented exemple of how the configuration works.
