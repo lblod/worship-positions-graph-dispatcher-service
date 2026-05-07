@@ -87,7 +87,7 @@ curl -G "http://localhost/manual-dispatch" \
 
 Re-dispatch everything:
 ```bash
-curl "http://localhost/manual-dispatch"
+curl "http://localhost/manual-dispatch?type=http://data.lblod.info/vocabularies/erediensten/EredienstMandataris"
 ```
 
 While the queue drains, the service logs each job with its subject, duration, and the number of jobs still queued, so progress can be followed via the container logs.
