@@ -1,5 +1,5 @@
 import bodyParser from "body-parser";
-import { app } from "mu";
+import { app, errorHandler } from "mu";
 import { Delta } from "./lib/delta";
 import { ProcessingQueue } from './lib/processing-queue';
 import { Prerequisite } from "./lib/prerequisite";
@@ -262,3 +262,5 @@ async function dispatchToOrgGraphs(worshipAdministrativeUnit) {
     }
   }
 }
+
+app.use(errorHandler);
