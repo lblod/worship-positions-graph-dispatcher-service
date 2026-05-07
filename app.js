@@ -55,20 +55,25 @@ app.get("/", function (req, res) {
 });
 
 app.post("/delta", async function (req, res) {
-  const delta = new Delta(req.body);
+  try {
+    const delta = new Delta(req.body);
 
-  const inserts = delta.inserts;
-  const deletes = delta.deletes;
-  const subjects = [...inserts.map(insert => insert.subject.value), ...deletes.map(insert => insert.subject.value)];
-  const uniqueSubjects = [ ...new Set(subjects) ];
+    const inserts = delta.inserts;
+    const deletes = delta.deletes;
+    const subjects = [...inserts.map(insert => insert.subject.value), ...deletes.map(insert => insert.subject.value)];
+    const uniqueSubjects = [ ...new Set(subjects) ];
 
-  for (const subject of uniqueSubjects) {
-    // Ensuring we only process a subject when necessary to keep the queue as small as possible
-    if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
-      PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
+    for (const subject of uniqueSubjects) {
+      // Ensuring we only process a subject when necessary to keep the queue as small as possible
+      if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
+        PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
+      }
     }
+    return res.status(200).send();
+  } catch (e) {
+    console.error(`Error while handling /delta: ${e.message ? e.message : e}`);
+    return res.status(500).send({ message: e.message ? e.message : String(e) });
   }
-  return res.status(200).send();
 });
 
 /***********************************************
@@ -95,51 +100,56 @@ app.post("/delta", async function (req, res) {
  * @returns {Object} 400 - When the supplied `type` isn't a configured dispatch type.
  */
 app.post("/manual-dispatch", async function (req, res) {
-  let scheduled = 0;
-  if (req.query.subject) {
-    const subject = req.query.subject;
-    console.log(`Only one subject to (re-)dispatch: ${subject}`);
-    if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
-      PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
-      scheduled += 1;
+  try {
+    let scheduled = 0;
+    if (req.query.subject) {
+      const subject = req.query.subject;
+      console.log(`Only one subject to (re-)dispatch: ${subject}`);
+      if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
+        PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
+        scheduled += 1;
+      }
+      console.log(`Scheduling done. Newly scheduled: ${scheduled}. Queue size: ${PROCESSING_QUEUE.size()}.`);
+      return res.status(201).send();
+    }
+
+    const configuredTypes = [
+      ...new Set([
+        ...dispatchToOrgGraphsConfig.map(c => c.type),
+        ...dispatchToPublicGraphConfig.map(c => c.type)
+      ])
+    ];
+
+    let typesToDispatch;
+    if (req.query.type) {
+      if (!configuredTypes.includes(req.query.type)) {
+        return res.status(400).send({
+          message: `Type "${req.query.type}" is not a configured dispatch type.`,
+          configuredTypes
+        });
+      }
+      typesToDispatch = [req.query.type];
+      console.log(`Dispatching subjects of type ${req.query.type} from GRAPH ${DISPATCH_SOURCE_GRAPH}`);
+    } else {
+      typesToDispatch = configuredTypes;
+      console.log(`Dispatching all configured subjects (again) from GRAPH ${DISPATCH_SOURCE_GRAPH}`);
+    }
+
+    const subjects = await getSubjectsInDispatchSourceGraphByTypes(typesToDispatch);
+    console.log(`Found ${subjects.length} subjects to (re-)dispatch.`);
+
+    for (const subject of subjects) {
+      if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
+        PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
+        scheduled += 1;
+      }
     }
     console.log(`Scheduling done. Newly scheduled: ${scheduled}. Queue size: ${PROCESSING_QUEUE.size()}.`);
     return res.status(201).send();
+  } catch (e) {
+    console.error(`Error while handling /manual-dispatch: ${e.message ? e.message : e}`);
+    return res.status(500).send({ message: e.message ? e.message : String(e) });
   }
-
-  const configuredTypes = [
-    ...new Set([
-      ...dispatchToOrgGraphsConfig.map(c => c.type),
-      ...dispatchToPublicGraphConfig.map(c => c.type)
-    ])
-  ];
-
-  let typesToDispatch;
-  if (req.query.type) {
-    if (!configuredTypes.includes(req.query.type)) {
-      return res.status(400).send({
-        message: `Type "${req.query.type}" is not a configured dispatch type.`,
-        configuredTypes
-      });
-    }
-    typesToDispatch = [req.query.type];
-    console.log(`Dispatching subjects of type ${req.query.type} from GRAPH ${DISPATCH_SOURCE_GRAPH}`);
-  } else {
-    typesToDispatch = configuredTypes;
-    console.log(`Dispatching all configured subjects (again) from GRAPH ${DISPATCH_SOURCE_GRAPH}`);
-  }
-
-  const subjects = await getSubjectsInDispatchSourceGraphByTypes(typesToDispatch);
-  console.log(`Found ${subjects.length} subjects to (re-)dispatch.`);
-
-  for (const subject of subjects) {
-    if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
-      PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
-      scheduled += 1;
-    }
-  }
-  console.log(`Scheduling done. Newly scheduled: ${scheduled}. Queue size: ${PROCESSING_QUEUE.size()}.`);
-  return res.status(201).send();
 });
 
 /***********************************************
