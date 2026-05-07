@@ -61,7 +61,7 @@ Triggers the processing and dispatching of data following configuration in `disp
 
 The debug API provides endpoints to assist with troubleshooting and resolving issues related to dispatching. Don't expose this API in production.
 
-##### GET `/manual-dispatch`
+##### POST `/manual-dispatch`
 
 Manually triggers the dispatch process. The dispatch logic clears data from non-source graphs before re-inserting, so a manual run is enough to correct misplaced data.
 
@@ -75,19 +75,17 @@ Manually triggers the dispatch process. The dispatch logic clears data from non-
 
 Re-dispatch a single subject:
 ```bash
-curl -G "http://localhost/manual-dispatch" \
-  --data-urlencode "subject=http://data.lblod.info/id/some-subject/123"
+curl -X POST "http://localhost/manual-dispatch?subject=http://data.lblod.info/id/some-subject/123"
 ```
 
 Re-dispatch every subject of one type (e.g. all `EredienstMandataris`):
 ```bash
-curl -G "http://localhost/manual-dispatch" \
-  --data-urlencode "type=http://data.lblod.info/vocabularies/erediensten/EredienstMandataris"
+curl -X POST "http://localhost/manual-dispatch?type=http://data.lblod.info/vocabularies/erediensten/EredienstMandataris"
 ```
 
 Re-dispatch everything:
 ```bash
-curl "http://localhost/manual-dispatch?type=http://data.lblod.info/vocabularies/erediensten/EredienstMandataris"
+curl -X POST "http://localhost/manual-dispatch"
 ```
 
 While the queue drains, the service logs each job with its subject, duration, and the number of jobs still queued, so progress can be followed via the container logs.

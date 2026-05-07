@@ -73,8 +73,7 @@ app.post("/delta", async function (req, res) {
 
 /***********************************************
  * DEBUG/RESCUE ENDPOINTS
- * Not meant to be exposed
- * Note: GET calls with side effects (sorry)
+ * Not meant to be exposed.
  ***********************************************/
 
 /**
@@ -85,7 +84,7 @@ app.post("/delta", async function (req, res) {
  * The dispatch logic itself takes care of clearing data from non-source graphs
  * before re-inserting, so a re-run is sufficient to correct misplaced data.
  *
- * @route GET /manual-dispatch
+ * @route POST /manual-dispatch
  * @param {string} [subject] - The URI of a specific subject to (re-)dispatch.
  *   Takes precedence over `type` if both are provided.
  * @param {string} [type] - A configured dispatch type URI. If provided, only
@@ -95,7 +94,7 @@ app.post("/delta", async function (req, res) {
  * @returns {Object} 201 - Empty response indicating dispatch has been scheduled.
  * @returns {Object} 400 - When the supplied `type` isn't a configured dispatch type.
  */
-app.get("/manual-dispatch", async function (req, res) {
+app.post("/manual-dispatch", async function (req, res) {
   let scheduled = 0;
   if (req.query.subject) {
     const subject = req.query.subject;
