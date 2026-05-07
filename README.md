@@ -43,6 +43,7 @@ The following environment variables can be configured:
 
 - `LANDING_ZONE_GRAPHS`: The graphs where the consumers first put the consumed data, separated by a ",". Defaults to 'http://mu.semte.ch/graphs/landing-zone/worship-services-sensitive,http://mu.semte.ch/graphs/landing-zone/worship-posts'
 - `DISPATCH_SOURCE_GRAPH`: The graphs from which we want to dispatch the triples. Defaults to 'http://mu.semte.ch/graphs/ingest'
+- `MANUAL_DISPATCH_BATCH_SIZE`: Page size used when enumerating subjects for the `/manual-dispatch` endpoint. Each configured type is queried separately and paginated with this `LIMIT`. Defaults to `100`.
 
 ## Initial dispatch
 
@@ -55,6 +56,39 @@ The service then proceeds to doing an initial dispatching. The goal is to reduce
 ### POST /delta
 
 Triggers the processing and dispatching of data following configuration in `disptch-config.js`
+
+#### DEBUG API
+
+The debug API provides endpoints to assist with troubleshooting and resolving issues related to dispatching. Don't expose this API in production.
+
+##### POST `/manual-dispatch`
+
+Manually triggers the dispatch process. The dispatch logic clears data from non-source graphs before re-inserting, so a manual run is enough to correct misplaced data.
+
+**Usage:**
+- To dispatch a specific subject, provide `?subject=http://example/subjects/123`.
+- To restrict the run to a single configured type, provide `?type=<type-uri>`. The type must appear in `dispatch-config.js`; otherwise the endpoint returns a 400 with the list of accepted types.
+- Without query parameters, the endpoint re-dispatches all subjects in `DISPATCH_SOURCE_GRAPH` whose type matches one of the types declared in `dispatch-config.js` (org or public).
+- If both `subject` and `type` are provided, `subject` wins.
+
+**Examples:**
+
+Re-dispatch a single subject:
+```bash
+curl -X POST "http://localhost/manual-dispatch?subject=http://data.lblod.info/id/some-subject/123"
+```
+
+Re-dispatch every subject of one type (e.g. all `EredienstMandataris`):
+```bash
+curl -X POST "http://localhost/manual-dispatch?type=http://data.lblod.info/vocabularies/erediensten/EredienstMandataris"
+```
+
+Re-dispatch everything:
+```bash
+curl -X POST "http://localhost/manual-dispatch"
+```
+
+While the queue drains, the service logs each job with its subject, duration, and the number of jobs still queued, so progress can be followed via the container logs.
 
 ## Configuration
 

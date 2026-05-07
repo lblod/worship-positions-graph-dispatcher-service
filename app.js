@@ -14,13 +14,14 @@ import {
   insertRepresentativeOrganExtraTriples,
   insertKboForAcmidm,
   getSubjectsToRedispatchToOrgGraph,
-  getSubjectsToRedispatchToPublicGraph
+  getSubjectsToRedispatchToPublicGraph,
+  getSubjectsInDispatchSourceGraphByTypes
 } from "./lib/queries";
 import {
   dispatchToOrgGraphsConfig,
   dispatchToPublicGraphConfig
 } from "./dispatch-config";
-import { PUBLIC_GRAPH } from "./config"
+import { PUBLIC_GRAPH, DISPATCH_SOURCE_GRAPH } from "./config"
 
 const PROCESSING_QUEUE = new ProcessingQueue('worship-positions-process-queue', {
   prerequisite: new Prerequisite()
@@ -69,6 +70,81 @@ app.post("/delta", async function (req, res) {
   }
   return res.status(200).send();
 });
+
+/***********************************************
+ * DEBUG/RESCUE ENDPOINTS
+ * Not meant to be exposed.
+ ***********************************************/
+
+/**
+ * Triggers the dispatch process manually.
+ * This is intended for scenarios such as debugging, restarting failed initial syncs,
+ * or re-dispatching subjects that encountered issues during dispatching.
+ *
+ * The dispatch logic itself takes care of clearing data from non-source graphs
+ * before re-inserting, so a re-run is sufficient to correct misplaced data.
+ *
+ * @route POST /manual-dispatch
+ * @param {string} [subject] - The URI of a specific subject to (re-)dispatch.
+ *   Takes precedence over `type` if both are provided.
+ * @param {string} [type] - A configured dispatch type URI. If provided, only
+ *   subjects of that type in DISPATCH_SOURCE_GRAPH will be (re-)dispatched.
+ *   Without `subject` and without `type`, every subject in DISPATCH_SOURCE_GRAPH
+ *   whose type appears in the dispatch configuration will be (re-)dispatched.
+ * @returns {Object} 201 - Empty response indicating dispatch has been scheduled.
+ * @returns {Object} 400 - When the supplied `type` isn't a configured dispatch type.
+ */
+app.post("/manual-dispatch", async function (req, res) {
+  let scheduled = 0;
+  if (req.query.subject) {
+    const subject = req.query.subject;
+    console.log(`Only one subject to (re-)dispatch: ${subject}`);
+    if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
+      PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
+      scheduled += 1;
+    }
+    console.log(`Scheduling done. Newly scheduled: ${scheduled}. Queue size: ${PROCESSING_QUEUE.size()}.`);
+    return res.status(201).send();
+  }
+
+  const configuredTypes = [
+    ...new Set([
+      ...dispatchToOrgGraphsConfig.map(c => c.type),
+      ...dispatchToPublicGraphConfig.map(c => c.type)
+    ])
+  ];
+
+  let typesToDispatch;
+  if (req.query.type) {
+    if (!configuredTypes.includes(req.query.type)) {
+      return res.status(400).send({
+        message: `Type "${req.query.type}" is not a configured dispatch type.`,
+        configuredTypes
+      });
+    }
+    typesToDispatch = [req.query.type];
+    console.log(`Dispatching subjects of type ${req.query.type} from GRAPH ${DISPATCH_SOURCE_GRAPH}`);
+  } else {
+    typesToDispatch = configuredTypes;
+    console.log(`Dispatching all configured subjects (again) from GRAPH ${DISPATCH_SOURCE_GRAPH}`);
+  }
+
+  const subjects = await getSubjectsInDispatchSourceGraphByTypes(typesToDispatch);
+  console.log(`Found ${subjects.length} subjects to (re-)dispatch.`);
+
+  for (const subject of subjects) {
+    if (!PROCESSING_QUEUE.hasJobForSubject(subject)) {
+      PROCESSING_QUEUE.addJob(subject, () => processSubject(subject));
+      scheduled += 1;
+    }
+  }
+  console.log(`Scheduling done. Newly scheduled: ${scheduled}. Queue size: ${PROCESSING_QUEUE.size()}.`);
+  return res.status(201).send();
+});
+
+/***********************************************
+ * END DEBUG/RESCUE ENDPOINTS
+ ***********************************************/
 
 /**
  * Processes a subject by finding if it should be dispatched and where
